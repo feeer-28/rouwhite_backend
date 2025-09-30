@@ -4,15 +4,12 @@
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
-  "scripts": {
-    "start": "node bin/server.js",
-    "build": "node ace build",
-    "dev": "node ace serve --hmr",
-    "test": "node ace test",
-    "lint": "eslint .",
-    "format": "prettier --write .",
-    "typecheck": "tsc --noEmit"
-  },
+"scripts": {
+  "build": "node ace build --production",
+  "start": "node build/server.js",
+  "dev": "node ace serve --watch"
+},
+
   "imports": {
     "#controllers/*": "./app/controllers/*.js",
     "#exceptions/*": "./app/exceptions/*.js",
