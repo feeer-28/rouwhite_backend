@@ -20,11 +20,11 @@ export default class Role extends BaseModel {
     static table = 'roles';
 }
 __decorate([
-    column({ isPrimary: true, columnName: 'idrol' }),
+    column({ isPrimary: true, columnName: 'id_rol' }),
     __metadata("design:type", Number)
 ], Role.prototype, "idRol", void 0);
 __decorate([
-    column({ columnName: 'nombrerol' }),
+    column({ columnName: 'nombre_rol' }),
     __metadata("design:type", String)
 ], Role.prototype, "nombreRol", void 0);
 __decorate([

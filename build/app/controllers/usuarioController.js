@@ -1,5 +1,5 @@
 import User from '#models/user';
-import hash from '@adonisjs/core/services/hash';
+import bcrypt from 'bcrypt';
 export default class UsuarioController {
     async store({ request, response }) {
         try {
@@ -19,7 +19,7 @@ export default class UsuarioController {
             if (exists) {
                 return response.conflict({ message: 'El email ya está registrado' });
             }
-            const passwordHash = await hash.make(password);
+            const passwordHash = await bcrypt.hash(password, 10);
             const user = await User.create({
                 nombre,
                 apellido,
@@ -78,7 +78,7 @@ export default class UsuarioController {
                 }
             }
             if (payload.password) {
-                payload.password = await hash.make(payload.password);
+                payload.password = await bcrypt.hash(payload.password, 10);
             }
             user.merge({
                 nombre: payload.nombre ?? user.nombre,
