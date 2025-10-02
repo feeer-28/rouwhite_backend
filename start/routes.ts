@@ -13,14 +13,9 @@ import FavoritoController from '#controllers/favoritoController'
 import PqrsController from '#controllers/pqrsController'
 import BusLocationController from '#controllers/busLocationController'
 
-router.get('/', async () => {
-  return {
-    hello: 'world',
-  }
-})
-
 // Auth routes
-router.post('/auth/register', [AuthController, 'register'])
+router.post('/auth/register', [AuthController, 'registerUsuario'])
+router.post('/auth/register-admin', [AuthController, 'registerAdmin'])
 router.post('/auth/login', [AuthController, 'login'])
 router.post('/auth/logout', [AuthController, 'logout'])
 

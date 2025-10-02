@@ -13,10 +13,10 @@ export enum RolTipo {
 export default class Role extends BaseModel {
   static table = 'roles'
 
-  @column({ isPrimary: true, columnName: 'idrol' })
+  @column({ isPrimary: true, columnName: 'id_rol' })
   declare idRol: number
 
-  @column({ columnName: 'nombrerol' })
+  @column({ columnName: 'nombre_rol' })
   declare nombreRol: RolTipo
 
   // Relaciones

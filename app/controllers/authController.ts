@@ -4,44 +4,31 @@ import jwt from 'jsonwebtoken'
 import hash from '@adonisjs/core/services/hash'
 import User from '#models/user'
 import Role from '#models/role'
-import vine from '@vinejs/vine'
+import { RolTipo } from '#models/role'
+import { registerUsuarioValidator, registerAdminValidator, loginValidator } from '#validators/auth'
 
 export default class AuthController {
-  public async register({ request, response }: HttpContext) {
+  // Registro de USUARIO COMÚN: rol fijo USUARIO
+  public async registerUsuario({ request, response }: HttpContext) {
     try {
-      // Validación con Vine
-      const registerSchema = vine.object({
-        nombre: vine.string().trim().minLength(2).maxLength(64),
-        apellido: vine.string().trim().minLength(2).maxLength(64),
-        email: vine.string().trim().toLowerCase().email(),
-        password: vine.string().minLength(6).maxLength(128),
-        identificacion: vine.string().trim().minLength(3).maxLength(64),
-        rolId: vine.number().positive(),
-        empresaId: vine.number().positive().optional(),
-      })
-      const payload = await vine.validate({ schema: registerSchema, data: request.all() })
+      const payload = await registerUsuarioValidator.validate(request.all())
+      const email = payload.email.trim().toLowerCase()
 
-      // Normalizar email
-      const emailNormalized = payload.email
-
-      // Validar unicidad de email
-      const exists = await User.query().where('email', emailNormalized).first()
+      const exists = await User.query().where('email', email).first()
       if (exists) return response.conflict({ message: 'El email ya está registrado' })
 
-      // Validar rol existente (opcional, pero útil)
-      const role = await Role.find(payload.rolId)
-      if (!role) return response.badRequest({ message: 'rolId inválido' })
+      const rol = await Role.query().where('nombre_rol', RolTipo.USUARIO).first()
+      if (!rol) return response.internalServerError({ message: 'Rol USUARIO no configurado' })
 
-      // IMPORTANTE: No hashear manualmente aquí. El modelo User usa withAuthFinder y hashea automáticamente.
+      const passwordHash = await hash.make(String(payload.password))
       const user = await User.create({
         nombre: payload.nombre,
         apellido: payload.apellido,
-        email: emailNormalized,
-        password: String(payload.password),
+        email,
+        password: passwordHash,
         identificacion: payload.identificacion,
-        rolId: payload.rolId,
-        empresaId: payload.empresaId ?? null,
-        estado: true,
+        rolId: rol.idRol,
+        empresaId: null,
       })
 
       return response.created({
@@ -61,14 +48,49 @@ export default class AuthController {
     }
   }
 
+  // Registro de ADMIN: rol fijo ADMIN, empresaId opcional
+  public async registerAdmin({ request, response }: HttpContext) {
+    try {
+      const payload = await registerAdminValidator.validate(request.all())
+      const email = payload.email.trim().toLowerCase()
+
+      const exists = await User.query().where('email', email).first()
+      if (exists) return response.conflict({ message: 'El email ya está registrado' })
+
+      const rol = await Role.query().where('nombre_rol', RolTipo.ADMIN).first()
+      if (!rol) return response.internalServerError({ message: 'Rol ADMIN no configurado' })
+
+      const passwordHash = await hash.make(String(payload.password))
+      const user = await User.create({
+        nombre: payload.nombre,
+        apellido: payload.apellido,
+        email,
+        password: passwordHash,
+        identificacion: payload.identificacion,
+        rolId: rol.idRol,
+        empresaId: null,
+      })
+
+      return response.created({
+        message: 'Admin registrado correctamente',
+        user: {
+          idUsuario: user.idUsuario,
+          nombre: user.nombre,
+          apellido: user.apellido,
+          email: user.email,
+          identificacion: user.identificacion,
+          rolId: user.rolId,
+          empresaId: user.empresaId,
+        },
+      })
+    } catch (error) {
+      return response.internalServerError({ message: 'Error al registrar admin', error: String(error) })
+    }
+  }
+
   public async login({ request, response }: HttpContext) {
     try {
-      // Validación con Vine
-      const loginSchema = vine.object({
-        email: vine.string().trim().toLowerCase().email(),
-        password: vine.string().minLength(6).maxLength(128),
-      })
-      const { email, password } = await vine.validate({ schema: loginSchema, data: request.all() })
+      const { email, password } = await loginValidator.validate(request.all())
 
       const emailNormalized = email
       const user = await User.query().where('email', emailNormalized).first()
