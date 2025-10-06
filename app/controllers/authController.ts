@@ -9,6 +9,8 @@ import Role from '#models/role'
 import { RolTipo } from '#models/role'
 import { registerUsuarioValidator, registerAdminValidator, loginValidator } from '#validators/auth'
 
+//este solo es un comentario 
+
 export default class AuthController {
   // Registro de USUARIO COMÚN: rol fijo USUARIO
   public async registerUsuario({ request, response }: HttpContext) {
