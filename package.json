@@ -7,7 +7,8 @@
   "scripts": {
     "build": "node ace build",
     "start": "node build/server.js",
-    "dev": "node ace serve --watch"
+    "dev": "node ace serve --watch",
+    "test": "jest"
   },
   "imports": {
     "#controllers/*": "./app/controllers/*.js",
