@@ -36,23 +36,20 @@ export default class EmpresaController {
   // Crear empresa
   public async store({ request, response }: HttpContext) {
     try {
-      const { nombreEmpresa, email, direccion, telefono } = request.only([
-        'nombreEmpresa',
-        'email',
-        'direccion',
-        'telefono',
-      ])
+      const body = request.all()
+      const nombreNormalizado: string | undefined = body.nombre ?? body.nombre_empresa ?? body.nombreEmpresa
+      const { email, direccion, telefono } = request.only(['email', 'direccion', 'telefono'])
 
-      if (!nombreEmpresa) {
-        return response.badRequest({ message: 'nombreEmpresa es requerido' })
+      if (!nombreNormalizado) {
+        return response.badRequest({ message: 'El nombre de la empresa es requerido (nombre o nombre_empresa)' })
       }
 
-      const exists = await Empresa.query().where('nombreEmpresa', nombreEmpresa).first()
+      const exists = await Empresa.query().where('nombreEmpresa', nombreNormalizado).first()
       if (exists) {
         return response.conflict({ message: 'La empresa ya existe' })
       }
 
-      const empresa = await Empresa.create({ nombreEmpresa, email, direccion, telefono })
+      const empresa = await Empresa.create({ nombreEmpresa: nombreNormalizado, email, direccion, telefono })
       return response.created({ message: 'Empresa creada correctamente', empresa })
     } catch (error) {
       return response.internalServerError({ message: 'Error al crear empresa', error: String(error) })
@@ -63,16 +60,18 @@ export default class EmpresaController {
   public async update({ params, request, response }: HttpContext) {
     try {
       const { id } = params
-      const payload = request.only(['nombreEmpresa', 'email', 'direccion', 'telefono'])
+      const body = request.all()
+      const nombreNormalizado: string | undefined = body.nombre ?? body.nombre_empresa ?? body.nombreEmpresa
+      const payload = request.only(['email', 'direccion', 'telefono']) as { email?: string; direccion?: string; telefono?: string }
 
       const empresa = await Empresa.find(id)
       if (!empresa) {
         return response.notFound({ message: 'Empresa no encontrada' })
       }
 
-      if (payload.nombreEmpresa && payload.nombreEmpresa !== empresa.nombreEmpresa) {
+      if (nombreNormalizado && nombreNormalizado !== empresa.nombreEmpresa) {
         const nameExists = await Empresa.query()
-          .where('nombreEmpresa', payload.nombreEmpresa)
+          .where('nombreEmpresa', nombreNormalizado)
           .andWhereNot('idEmpresa', id)
           .first()
         if (nameExists) {
@@ -81,7 +80,7 @@ export default class EmpresaController {
       }
 
       empresa.merge({
-        nombreEmpresa: payload.nombreEmpresa ?? empresa.nombreEmpresa,
+        nombreEmpresa: nombreNormalizado ?? empresa.nombreEmpresa,
         email: payload.email ?? empresa.email,
         direccion: payload.direccion ?? empresa.direccion,
         telefono: payload.telefono ?? empresa.telefono,

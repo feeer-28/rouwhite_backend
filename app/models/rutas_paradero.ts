@@ -28,9 +28,9 @@ export default class RutaParadero extends BaseModel {
   declare tipo: TipoRuta
 
   // Relaciones
-  @belongsTo(() => Ruta, { foreignKey: 'ruta_id' })
+  @belongsTo(() => Ruta, { foreignKey: 'rutaId' })
   declare ruta: BelongsTo<typeof Ruta>
 
-  @belongsTo(() => Paradero, { foreignKey: 'paradero_id' })
+  @belongsTo(() => Paradero, { foreignKey: 'paraderoId' })
   declare paradero: BelongsTo<typeof Paradero>
 }

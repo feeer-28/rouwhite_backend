@@ -25,7 +25,8 @@ export default class FavoritoController {
       const user = (request as any).authUser as { idUsuario: number }
       if (!user) return response.unauthorized({ message: 'No autenticado' })
 
-      const { rutaId } = request.only(['rutaId'])
+      const body = request.all()
+      const rutaId: number | undefined = body.rutaId ?? body.ruta_id
       if (!rutaId) return response.badRequest({ message: 'rutaId es requerido' })
 
       const ruta = await Ruta.find(rutaId)

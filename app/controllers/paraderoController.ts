@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import Paradero from '#models/paradero'
 import Barrio from '#models/barrio'
+import Ruta from '#models/ruta'
 
 export default class ParaderoController {
   // Listar paraderos con paginación y búsqueda por nombre
@@ -37,13 +38,12 @@ export default class ParaderoController {
   // Crear paradero
   public async store({ request, response }: HttpContext) {
     try {
-      const { nombre, direccion, latitud, longitud, barrioId } = request.only([
-        'nombre',
-        'direccion',
-        'latitud',
-        'longitud',
-        'barrioId',
-      ])
+      const body = request.all()
+      const nombre: string | undefined = body.nombre
+      const direccion: string | null | undefined = body.direccion ?? null
+      const latitud: number | null | undefined = body.latitud ?? null
+      const longitud: number | null | undefined = body.longitud ?? null
+      const barrioId: number | null | undefined = (body.barrioId ?? body.barrio_id) ?? null
 
       if (!nombre) {
         return response.badRequest({ message: 'nombre es requerido' })
@@ -72,7 +72,14 @@ export default class ParaderoController {
   public async update({ params, request, response }: HttpContext) {
     try {
       const { id } = params
-      const payload = request.only(['nombre', 'direccion', 'latitud', 'longitud', 'barrioId'])
+      const body = request.all()
+      const payload: any = {
+        nombre: body.nombre,
+        direccion: body.direccion,
+        latitud: body.latitud,
+        longitud: body.longitud,
+        barrioId: body.barrioId ?? body.barrio_id,
+      }
 
       const paradero = await Paradero.find(id)
       if (!paradero) {
@@ -121,6 +128,32 @@ export default class ParaderoController {
       return response.ok({ message: 'Paradero eliminado' })
     } catch (error) {
       return response.internalServerError({ message: 'Error al eliminar paradero', error: String(error) })
+    }
+  }
+
+  // Listar rutas que pasan por un paradero específico
+  public async rutas({ params, response }: HttpContext) {
+    try {
+      const id = Number(params.id)
+      if (!Number.isFinite(id)) return response.badRequest({ message: 'Id inválido' })
+
+      const paradero = await Paradero.find(id)
+      if (!paradero) return response.notFound({ message: 'Paradero no encontrado' })
+
+      const rutas = await Ruta.query()
+        .join('ruta_paraderos', 'ruta_paraderos.ruta_id', 'rutas.id_ruta')
+        .where('ruta_paraderos.paradero_id', id)
+        .distinct('rutas.id_ruta')
+        .select('rutas.*')
+        .preload('empresa')
+
+      if (rutas.length === 0) {
+        return response.ok({ message: 'No se encontraron rutas para este paradero', rutas: [] })
+      }
+
+      return response.ok({ rutas, total: rutas.length })
+    } catch (error) {
+      return response.internalServerError({ message: 'Error al listar rutas por paradero', error: String(error) })
     }
   }
 }
