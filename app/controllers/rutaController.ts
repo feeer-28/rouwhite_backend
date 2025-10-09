@@ -6,8 +6,14 @@ export default class RutaController {
   // Listar rutas con búsqueda por nombre_ruta
   public async index({ request, response }: HttpContext) {
     try {
-      const { q } = request.qs()
+      const { q, empresaId, empresa_id } = request.qs()
       const query = Ruta.query().preload('empresa')
+
+      const jwtEmpresaId = (request as any)?.jwtPayload?.empresaId
+      const empId = Number(empresaId ?? empresa_id ?? jwtEmpresaId)
+      if (Number.isFinite(empId)) {
+        query.where('empresa_id', empId)
+      }
 
       if (q) {
         query.whereILike('nombre_ruta', `%${q}%`)
@@ -43,7 +49,9 @@ export default class RutaController {
   // Crear ruta
   public async store({ request, response }: HttpContext) {
     try {
-      const { nombreRuta, empresaId } = request.only(['nombreRuta', 'empresaId'])
+      const body = request.all()
+      const nombreRuta = body.nombreRuta ?? body.nombre_ruta ?? body.nombre
+      const empresaId: number | undefined = body.empresaId ?? body.empresa_id
 
       if (!nombreRuta || !empresaId) {
         return response.badRequest({ message: 'nombreRuta y empresaId son requeridos' })
@@ -73,24 +81,26 @@ export default class RutaController {
   public async update({ params, request, response }: HttpContext) {
     try {
       const { id } = params
-      const payload = request.only(['nombreRuta', 'empresaId'])
+      const body = request.all()
+      const nombreRuta = body.nombreRuta ?? body.nombre_ruta ?? body.nombre
+      const empresaId: number | undefined = body.empresaId ?? body.empresa_id
 
       const ruta = await Ruta.find(id)
       if (!ruta) {
         return response.notFound({ message: 'Ruta no encontrada' })
       }
 
-      if (payload.empresaId) {
-        const empresa = await Empresa.find(payload.empresaId)
+      if (empresaId) {
+        const empresa = await Empresa.find(empresaId)
         if (!empresa) {
           return response.badRequest({ message: 'empresaId inválido' })
         }
       }
 
-      if (payload.nombreRuta && (payload.nombreRuta !== ruta.nombreRuta || (payload.empresaId && payload.empresaId !== ruta.empresaId))) {
+      if (nombreRuta && (nombreRuta !== ruta.nombreRuta || (empresaId && empresaId !== ruta.empresaId))) {
         const dup = await Ruta.query()
-          .where('nombre_ruta', payload.nombreRuta)
-          .andWhere('empresa_id', payload.empresaId ?? ruta.empresaId)
+          .where('nombre_ruta', nombreRuta)
+          .andWhere('empresa_id', empresaId ?? ruta.empresaId)
           .andWhereNot('id_ruta', id)
           .first()
         if (dup) {
@@ -99,8 +109,8 @@ export default class RutaController {
       }
 
       ruta.merge({
-        nombreRuta: payload.nombreRuta ?? ruta.nombreRuta,
-        empresaId: payload.empresaId ?? ruta.empresaId,
+        nombreRuta: nombreRuta ?? ruta.nombreRuta,
+        empresaId: empresaId ?? ruta.empresaId,
       })
       await ruta.save()
 

@@ -1,8 +1,5 @@
 
-import hash from '@adonisjs/core/services/hash'
-import { compose } from '@adonisjs/core/helpers'
 import { BaseModel, column, belongsTo, hasMany } from '@adonisjs/lucid/orm'
-import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 import { DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
 import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import Role from '#models/role'
@@ -10,12 +7,7 @@ import Empresa from '#models/empresa'
 import Favorito from '#models/favorito'
 import Pqrs from '#models/pqrs'
 
-const AuthFinder = withAuthFinder(() => hash.use('bcrypt'), {
-  uids: ['email'],
-  passwordColumnName: 'password',
-})
-
-export default class User extends compose(BaseModel, AuthFinder) {
+export default class User extends BaseModel {
   static table = 'usuarios'
 
   @column({ isPrimary: true, columnName: 'id_usuario' })

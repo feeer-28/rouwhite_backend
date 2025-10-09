@@ -7,13 +7,24 @@ export default class RutaParaderoController {
   // Listar entradas de la pivot. Se puede filtrar por rutaId (?rutaId=1)
   public async index({ request, response }: HttpContext) {
     try {
-      const { rutaId } = request.qs()
-      const query = RutaParadero.query().preload('paradero').preload('ruta')
+      const qs = request.qs()
+      const rutaId = (qs.rutaId ?? qs.ruta_id) as number | undefined
       if (rutaId) {
-        query.where('rutaId', Number(rutaId))
+        const ida = await RutaParadero.query()
+          .where({ rutaId: Number(rutaId), tipo: TipoRuta.IDA })
+          .preload('paradero')
+          .orderBy('orden', 'asc')
+
+        const retorno = await RutaParadero.query()
+          .where({ rutaId: Number(rutaId), tipo: TipoRuta.RETORNO })
+          .preload('paradero')
+          .orderBy('orden', 'asc')
+
+        return response.ok({ rutaId: Number(rutaId), ida, retorno })
+      } else {
+        const list = await RutaParadero.query().preload('paradero').preload('ruta').orderBy('orden', 'asc')
+        return response.ok(list)
       }
-      const list = await query.orderBy('orden', 'asc')
-      return response.ok(list)
     } catch (error) {
       return response.internalServerError({ message: 'Error al listar ruta-paraderos', error: String(error) })
     }
@@ -22,12 +33,11 @@ export default class RutaParaderoController {
   // Crear entrada en la pivot
   public async store({ request, response }: HttpContext) {
     try {
-      const { rutaId, paraderoId, orden, tipo } = request.only(['rutaId', 'paraderoId', 'orden', 'tipo']) as {
-        rutaId?: number
-        paraderoId?: number
-        orden?: number
-        tipo?: TipoRuta | string
-      }
+      const body = request.all()
+      const rutaId: number | undefined = body.rutaId ?? body.ruta_id
+      const paraderoId: number | undefined = body.paraderoId ?? body.paradero_id
+      const orden: number | undefined = body.orden
+      const tipo: TipoRuta | string | undefined = body.tipo
 
       if (!rutaId || !paraderoId || typeof orden !== 'number' || orden < 0 || !tipo) {
         return response.badRequest({ message: 'rutaId, paraderoId, orden y tipo son requeridos' })

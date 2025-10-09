@@ -12,12 +12,16 @@ import BusController from '#controllers/busController'
 import FavoritoController from '#controllers/favoritoController'
 import PqrsController from '#controllers/pqrsController'
 import BusLocationController from '#controllers/busLocationController'
+import SearchController from '#controllers/searchController'
 
 // Auth routes
 router.post('/auth/register', [AuthController, 'registerUsuario'])
 router.post('/auth/register-admin', [AuthController, 'registerAdmin'])
 router.post('/auth/login', [AuthController, 'login'])
 router.post('/auth/logout', [AuthController, 'logout'])
+
+// Búsqueda unificada (pública)
+router.get('/search', [SearchController, 'search'])
 
 // Protected route example
 router.get('/me', async (ctx) => {
@@ -32,6 +36,7 @@ router.group(() => {
   router.post('/crear', [UsuarioController, 'store'])
   router.put('/:id', [UsuarioController, 'update'])
   router.delete('/:id', [UsuarioController, 'deactivate'])
+  router.put('/:id/activar', [UsuarioController, 'activate'])
 }).prefix('/users').use([middleware.jwt()])
 
 // Empresas CRUD (protected)
@@ -55,6 +60,7 @@ router.group(() => {
 router.group(() => {
   router.get('/listar', [BarrioController, 'index'])
   router.get('/:id', [BarrioController, 'show'])
+  router.get('/:id/rutas', [BarrioController, 'rutas'])
 }).prefix('/barrios')
 // Protegidas: crear/editar/eliminar
 router.group(() => {
@@ -68,6 +74,7 @@ router.group(() => {
 router.group(() => {
   router.get('/listar', [ParaderoController, 'index'])
   router.get('/:id', [ParaderoController, 'show'])
+  router.get('/:id/rutas', [ParaderoController, 'rutas'])
 }).prefix('/paraderos')
 // Protegidas: crear/editar/eliminar
 router.group(() => {
@@ -95,7 +102,7 @@ router.group(() => {
   router.post('/crear', [RutaParaderoController, 'store'])
   router.put('/:id', [RutaParaderoController, 'update'])
   router.delete('/:id', [RutaParaderoController, 'destroy'])
-}).prefix('/ruta-paraderos').use([middleware.jwt()])
+}).prefix('/ruta-paraderos')
 
 // Buses (protegidas)
 router.group(() => {
@@ -106,7 +113,7 @@ router.group(() => {
   router.delete('/:id', [BusController, 'destroy'])
   router.put('/:id/activar', [BusController, 'activate'])
   router.put('/:id/desactivar', [BusController, 'deactivate'])
-}).prefix('/buses').use([middleware.jwt()])
+}).prefix('/buses')
 
 // Favoritos (protegidas)
 router.group(() => {
@@ -137,3 +144,8 @@ router.group(() => {
   // Stream SSE en vivo de la ubicación
   router.get('/ubicacion/:idBus/stream', [BusLocationController, 'stream'])
 }).prefix('/api/bus').use([middleware.jwt()])
+
+// API Buses (actualizar ubicación puntual del bus por id)
+router.group(() => {
+  router.put('/:id/ubicacion', [BusController, 'updateLocation'])
+}).prefix('/api/buses').use([middleware.jwt()])

@@ -1,5 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import Barrio from '#models/barrio'
+import Ruta from '#models/ruta'
 
 export default class BarrioController {
   // Listar barrios con paginación y búsqueda por nombre
@@ -98,6 +99,33 @@ export default class BarrioController {
       return response.ok({ message: 'Barrio eliminado' })
     } catch (error) {
       return response.internalServerError({ message: 'Error al eliminar barrio', error: String(error) })
+    }
+  }
+
+  // Listar rutas que pasan por un barrio (por cualquiera de sus paraderos)
+  public async rutas({ params, response }: HttpContext) {
+    try {
+      const id = Number(params.id)
+      if (!Number.isFinite(id)) return response.badRequest({ message: 'Id inválido' })
+
+      const barrio = await Barrio.find(id)
+      if (!barrio) return response.notFound({ message: 'Barrio no encontrado' })
+
+      const rutas = await Ruta.query()
+        .join('ruta_paraderos', 'ruta_paraderos.ruta_id', 'rutas.id_ruta')
+        .join('paraderos', 'paraderos.id_paradero', 'ruta_paraderos.paradero_id')
+        .where('paraderos.barrio_id', id)
+        .distinct('rutas.id_ruta')
+        .select('rutas.*')
+        .preload('empresa')
+
+      if (rutas.length === 0) {
+        return response.ok({ message: 'No se encontraron rutas para este barrio', rutas: [] })
+      }
+
+      return response.ok({ rutas, total: rutas.length })
+    } catch (error) {
+      return response.internalServerError({ message: 'Error al listar rutas por barrio', error: String(error) })
     }
   }
 }
