@@ -1,13 +1,20 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import Bus from '#models/bus'
 import Empresa from '#models/empresa'
+import busLocationStore from '#services/bus_location_store'
 
 export default class BusController {
   // Listar buses con paginación y búsqueda por placa
   public async index({ request, response }: HttpContext) {
     try {
-      const { page = 1, perPage = 10, q } = request.qs()
+      const { page = 1, perPage = 10, q, empresaId, empresa_id } = request.qs()
       const query = Bus.query().preload('empresa')
+
+      const jwtEmpresaId = (request as any)?.jwtPayload?.empresaId
+      const empId = Number(empresaId ?? empresa_id ?? jwtEmpresaId)
+      if (Number.isFinite(empId)) {
+        query.where('empresa_id', empId)
+      }
 
       if (q) {
         query.whereILike('placa', `%${q}%`)
@@ -37,14 +44,13 @@ export default class BusController {
   // Crear bus
   public async store({ request, response }: HttpContext) {
     try {
-      const { placa, descripcion, empresaId, latitud, longitud, estado } = request.only([
-        'placa',
-        'descripcion',
-        'empresaId',
-        'latitud',
-        'longitud',
-        'estado',
-      ])
+      const body = request.all()
+      const placa: string | undefined = body.placa
+      const descripcion: string | null | undefined = body.descripcion ?? null
+      const empresaId: number | undefined = body.empresaId ?? body.empresa_id
+      const latitud: number | null | undefined = body.latitud ?? null
+      const longitud: number | null | undefined = body.longitud ?? null
+      const estado: boolean | undefined = typeof body.estado === 'boolean' ? body.estado : undefined
 
       if (!placa || !empresaId) {
         return response.badRequest({ message: 'placa y empresaId son requeridos' })
@@ -71,7 +77,15 @@ export default class BusController {
   public async update({ params, request, response }: HttpContext) {
     try {
       const { id } = params
-      const payload = request.only(['placa', 'descripcion', 'empresaId', 'latitud', 'longitud', 'estado'])
+      const body = request.all()
+      const payload: any = {
+        placa: body.placa,
+        descripcion: body.descripcion,
+        empresaId: body.empresaId ?? body.empresa_id,
+        latitud: body.latitud,
+        longitud: body.longitud,
+        estado: (typeof body.estado === 'boolean' ? body.estado : undefined),
+      }
 
       const bus = await Bus.find(id)
       if (!bus) {
@@ -148,6 +162,39 @@ export default class BusController {
       return response.ok({ message: 'Bus desactivado', bus })
     } catch (error) {
       return response.internalServerError({ message: 'Error al desactivar bus', error: String(error) })
+    }
+  }
+
+  // Actualizar ubicación del bus (simular que un dispositivo envía coordenadas)
+  // PUT /api/buses/:id/ubicacion
+  public async updateLocation({ params, request, response }: HttpContext) {
+    try {
+      const id = Number(params.id)
+      if (!Number.isFinite(id) || id <= 0) {
+        return response.badRequest({ message: 'Id de bus inválido' })
+      }
+
+      const { latitud, longitud } = request.only(['latitud', 'longitud']) as {
+        latitud?: number
+        longitud?: number
+      }
+
+      if (typeof latitud !== 'number' || latitud < -90 || latitud > 90) {
+        return response.badRequest({ message: 'latitud inválida (-90 a 90)' })
+      }
+      if (typeof longitud !== 'number' || longitud < -180 || longitud > 180) {
+        return response.badRequest({ message: 'longitud inválida (-180 a 180)' })
+      }
+
+      const bus = await Bus.find(id)
+      if (!bus) return response.notFound({ message: 'Bus no encontrado' })
+      if (bus.estado === false) return response.badRequest({ message: 'Bus inactivo' })
+
+      busLocationStore.set(id, latitud, longitud)
+
+      return response.ok({ message: 'Ubicación actualizada', idBus: id, latitud, longitud })
+    } catch (error) {
+      return response.internalServerError({ message: 'Error al actualizar ubicación del bus', error: String(error) })
     }
   }
 }

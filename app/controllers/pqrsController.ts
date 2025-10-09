@@ -9,7 +9,14 @@ export default class PqrsController {
         usuarioId: vine.number().positive().optional(),
         empresaId: vine.number().positive().optional(),
       })
-      const { usuarioId, empresaId } = await vine.validate({ schema: querySchema, data: request.qs() })
+
+      const raw = request.qs()
+      const jwtEmpresaId = (request as any)?.jwtPayload?.empresaId
+      const normalized = {
+        ...raw,
+        empresaId: raw.empresaId ?? raw.empresa_id ?? jwtEmpresaId,
+      }
+      const { usuarioId, empresaId } = await vine.validate({ schema: querySchema, data: normalized })
 
       const q = Pqrs.query().preload('usuario').preload('empresa').orderBy('idPQRS', 'desc')
       if (usuarioId) q.where('usuarioId', usuarioId)
@@ -44,7 +51,12 @@ export default class PqrsController {
         asunto: vine.string().trim().maxLength(150),
         mensaje: vine.string().trim().minLength(1),
       })
-      const payload = await vine.validate({ schema, data: request.all() })
+      const raw = request.all()
+      const normalized = {
+        ...raw,
+        empresaId: raw.empresaId ?? raw.empresa_id,
+      }
+      const payload = await vine.validate({ schema, data: normalized })
 
       // Tomar el usuario autenticado del middleware JWT
       const authUser = (ctx as any).authUser
