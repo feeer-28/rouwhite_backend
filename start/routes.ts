@@ -39,9 +39,13 @@ router.group(() => {
   router.put('/:id/activar', [UsuarioController, 'activate'])
 }).prefix('/users').use([middleware.jwt()])
 
-// Empresas CRUD (protected)
+// Empresas: público para listar
 router.group(() => {
   router.get('/listar', [EmpresaController, 'index'])
+}).prefix('/empresas')
+
+// Empresas CRUD (protected)
+router.group(() => {
   router.get('/:id', [EmpresaController, 'show'])
   router.post('/crear', [EmpresaController, 'store'])
   router.put('/:id', [EmpresaController, 'update'])
@@ -120,7 +124,7 @@ router.group(() => {
   router.get('/listar', [FavoritoController, 'index'])
   router.post('/crear', [FavoritoController, 'store'])
   router.delete('/:id', [FavoritoController, 'destroy'])
-}).prefix('/favoritos').use([middleware.jwt()])
+}).prefix('/favoritos')
 
 // PQRS
 // Públicas: listar y ver detalle
@@ -144,6 +148,14 @@ router.group(() => {
   // Stream SSE en vivo de la ubicación
   router.get('/ubicacion/:idBus/stream', [BusLocationController, 'stream'])
 }).prefix('/api/bus').use([middleware.jwt()])
+
+// Ubicación del bus (públicas, solo lectura)
+router.group(() => {
+  // Obtener ubicación actual del bus por id (público)
+  router.get('/ubicacion/:idBus', [BusLocationController, 'publicCurrent'])
+  // Stream SSE en vivo de la ubicación (público)
+  router.get('/ubicacion/:idBus/stream', [BusLocationController, 'publicStream'])
+}).prefix('/public/bus')
 
 // API Buses (actualizar ubicación puntual del bus por id)
 router.group(() => {
