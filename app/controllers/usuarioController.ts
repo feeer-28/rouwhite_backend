@@ -1,5 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import User from '#models/user'
+import Role, { RolTipo } from '#models/role'
 
 export default class UsuarioController {
   // Crear usuario
@@ -48,10 +49,20 @@ export default class UsuarioController {
       const { empresaId, empresa_id } = request.qs()
       const query = User.query().preload('rol').preload('empresa').orderBy('idUsuario', 'desc')
 
-      const jwtEmpresaId = (request as any)?.jwtPayload?.empresaId
-      const empId = Number(empresaId ?? empresa_id ?? jwtEmpresaId)
-      if (Number.isFinite(empId)) {
-        query.where('empresa_id', empId)
+      // Permitir que ADMIN liste todos los usuarios (sin filtro por empresa)
+      const jwtPayload = (request as any)?.jwtPayload as { rolId?: number; empresaId?: number } | undefined
+      let isAdmin = false
+      if (jwtPayload?.rolId) {
+        const role = await Role.find(jwtPayload.rolId)
+        isAdmin = role?.nombreRol === RolTipo.ADMIN
+      }
+
+      if (!isAdmin) {
+        const jwtEmpresaId = jwtPayload?.empresaId
+        const empId = Number(empresaId ?? empresa_id ?? jwtEmpresaId)
+        if (Number.isFinite(empId)) {
+          query.where('empresa_id', empId)
+        }
       }
 
       const users = await query

@@ -100,6 +100,56 @@ export default class BusLocationController {
       return response.internalServerError({ message: 'Error en stream de ubicación', error: String(error) })
     }
   }
+  
+  // GET /public/bus/ubicacion/:idBus (público, solo lectura)
+  public async publicCurrent(ctx: HttpContext) {
+    const { params, response } = ctx
+    try {
+      const idBus = Number(params.idBus)
+      if (!Number.isFinite(idBus) || idBus <= 0) return response.badRequest({ message: 'idBus inválido' })
+
+      const bus = await Bus.find(idBus)
+      if (!bus) return response.notFound({ message: 'Bus no encontrado' })
+      if (bus.estado === false) return response.badRequest({ message: 'Bus inactivo' })
+
+      const loc = busLocationStore.get(idBus)
+      if (!loc) return response.notFound({ message: 'Ubicación no disponible' })
+
+      return response.ok({ idBus, ...loc })
+    } catch (error) {
+      return response.internalServerError({ message: 'Error al obtener ubicación pública', error: String(error) })
+    }
+  }
+
+  // GET /public/bus/ubicacion/:idBus/stream (SSE público, solo lectura)
+  public async publicStream(ctx: HttpContext) {
+    const { params, response } = ctx
+    try {
+      const idBus = Number(params.idBus)
+      if (!Number.isFinite(idBus) || idBus <= 0) return response.badRequest({ message: 'idBus inválido' })
+
+      const bus = await Bus.find(idBus)
+      if (!bus) return response.notFound({ message: 'Bus no encontrado' })
+      if (bus.estado === false) return response.badRequest({ message: 'Bus inactivo' })
+
+      // Configurar SSE
+      response.response.setHeader('Content-Type', 'text/event-stream')
+      response.response.setHeader('Cache-Control', 'no-cache, no-transform')
+      response.response.setHeader('Connection', 'keep-alive')
+
+      const write = (data: any) => {
+        response.response.write(`data: ${JSON.stringify(data)}\n\n`)
+      }
+
+      const last = busLocationStore.get(idBus)
+      if (last) write({ idBus, ...last })
+
+      const unsubscribe = busLocationStore.onLocation(idBus, (loc) => write({ idBus, ...loc }))
+      requestOnceClose(ctx, unsubscribe)
+    } catch (error) {
+      return response.internalServerError({ message: 'Error en stream público de ubicación', error: String(error) })
+    }
+  }
 }
 
 // Utilidad: desuscribir cuando la conexión se cierra
