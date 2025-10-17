@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import Bus from '#models/bus'
 import Empresa from '#models/empresa'
+import Ruta from '#models/ruta'
 import busLocationStore from '#services/bus_location_store'
 
 export default class BusController {
@@ -8,7 +9,7 @@ export default class BusController {
   public async index({ request, response }: HttpContext) {
     try {
       const { page = 1, perPage = 10, q, empresaId, empresa_id } = request.qs()
-      const query = Bus.query().preload('empresa')
+      const query = Bus.query().preload('empresa').preload('ruta')
 
       const jwtEmpresaId = (request as any)?.jwtPayload?.empresaId
       const empId = Number(empresaId ?? empresa_id ?? jwtEmpresaId)
@@ -31,7 +32,7 @@ export default class BusController {
   public async show({ params, response }: HttpContext) {
     try {
       const { id } = params
-      const bus = await Bus.query().where('idBus', id).preload('empresa').first()
+      const bus = await Bus.query().where('idBus', id).preload('empresa').preload('ruta').first()
       if (!bus) {
         return response.notFound({ message: 'Bus no encontrado' })
       }
@@ -48,12 +49,13 @@ export default class BusController {
       const placa: string | undefined = body.placa
       const descripcion: string | null | undefined = body.descripcion ?? null
       const empresaId: number | undefined = body.empresaId ?? body.empresa_id
+      const rutaId: number | undefined = body.rutaId ?? body.ruta_id
       const latitud: number | null | undefined = body.latitud ?? null
       const longitud: number | null | undefined = body.longitud ?? null
       const estado: boolean | undefined = typeof body.estado === 'boolean' ? body.estado : undefined
 
-      if (!placa || !empresaId) {
-        return response.badRequest({ message: 'placa y empresaId son requeridos' })
+      if (!placa || !empresaId || !rutaId) {
+        return response.badRequest({ message: 'placa, empresaId y rutaId son requeridos' })
       }
 
       const empresa = await Empresa.find(empresaId)
@@ -61,12 +63,17 @@ export default class BusController {
         return response.badRequest({ message: 'empresaId inválido' })
       }
 
+      const ruta = await Ruta.find(rutaId)
+      if (!ruta) {
+        return response.badRequest({ message: 'rutaId inválido' })
+      }
+
       const exists = await Bus.query().where('placa', placa).first()
       if (exists) {
         return response.conflict({ message: 'Ya existe un bus con esa placa' })
       }
 
-      const bus = await Bus.create({ placa, descripcion, empresaId, latitud, longitud, estado })
+      const bus = await Bus.create({ placa, descripcion, empresaId, rutaId, latitud, longitud, estado })
       return response.created({ message: 'Bus creado correctamente', bus })
     } catch (error) {
       return response.internalServerError({ message: 'Error al crear bus', error: String(error) })
@@ -82,6 +89,7 @@ export default class BusController {
         placa: body.placa,
         descripcion: body.descripcion,
         empresaId: body.empresaId ?? body.empresa_id,
+        rutaId: body.rutaId ?? body.ruta_id,
         latitud: body.latitud,
         longitud: body.longitud,
         estado: (typeof body.estado === 'boolean' ? body.estado : undefined),
@@ -99,6 +107,13 @@ export default class BusController {
         }
       }
 
+      if (payload.rutaId) {
+        const ruta = await Ruta.find(payload.rutaId)
+        if (!ruta) {
+          return response.badRequest({ message: 'rutaId inválido' })
+        }
+      }
+
       if (payload.placa && payload.placa !== bus.placa) {
         const dup = await Bus.query().where('placa', payload.placa).andWhereNot('idBus', id).first()
         if (dup) {
@@ -110,6 +125,7 @@ export default class BusController {
         placa: payload.placa ?? bus.placa,
         descripcion: payload.descripcion ?? bus.descripcion,
         empresaId: payload.empresaId ?? bus.empresaId,
+        rutaId: payload.rutaId ?? bus.rutaId,
         latitud: payload.latitud ?? bus.latitud,
         longitud: payload.longitud ?? bus.longitud,
         estado: payload.estado ?? bus.estado,

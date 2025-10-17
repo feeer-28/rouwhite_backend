@@ -2,6 +2,7 @@ import { DateTime } from 'luxon'
 import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import Empresa from '#models/empresa'
+import Ruta from '#models/ruta'
 
 export default class Bus extends BaseModel {
   static table = 'buses'
@@ -17,6 +18,9 @@ export default class Bus extends BaseModel {
 
   @column({ columnName: 'empresa_id' })
   declare empresaId: number
+
+  @column({ columnName: 'ruta_id' })
+  declare rutaId: number
 
   @column()
   declare latitud: number | null
@@ -35,4 +39,9 @@ export default class Bus extends BaseModel {
     foreignKey: 'empresaId'
   })
   declare empresa: BelongsTo<typeof Empresa>
+
+  @belongsTo(() => Ruta, {
+    foreignKey: 'rutaId'
+  })
+  declare ruta: BelongsTo<typeof Ruta>
 }

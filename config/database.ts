@@ -13,7 +13,7 @@ const dbConfig = defineConfig({
         password: env.get('DB_PASSWORD'),
         database: env.get('DB_DATABASE'),
         // Supabase requiere SSL
-        ssl: { rejectUnauthorized: false },
+        ssl: { rejectUnauthorized: true },
       },
       migrations: {
         naturalSort: true,
