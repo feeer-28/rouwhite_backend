@@ -9,7 +9,7 @@ import { defineConfig } from '@adonisjs/cors'
 const corsConfig = defineConfig({
   enabled: true,
   // Permitir solo el origen del frontend durante desarrollo
-  origin: ['http://localhost:5173'],
+  origin: ['https://rouwhite-backend-1.onrender.com'],
   // Incluir OPTIONS para preflight
   methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   headers: true,
