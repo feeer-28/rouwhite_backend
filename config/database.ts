@@ -8,12 +8,13 @@ const dbConfig = defineConfig({
       client: 'pg',
       connection: {
         host: env.get('DB_HOST'),
-        port: Number(env.get('DB_PORT', 5432)),
+        port: Number(env.get('DB_PORT', 6543)),
         user: env.get('DB_USER'),
         password: env.get('DB_PASSWORD'),
         database: env.get('DB_DATABASE'),
         // Supabase requiere SSL
-        ssl: { rejectUnauthorized: true },
+        // archivo: config/database.ts
+        ssl: { rejectUnauthorized: false }
       },
       migrations: {
         naturalSort: true,
